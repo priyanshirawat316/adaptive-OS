@@ -1,44 +1,90 @@
+from math import isfinite, sqrt
+
+
 class WorkloadProfiler:
-    """
-    Analyzes a workload and creates a workload profile.
+    """Extract useful features from a list of processes."""
 
-    The profile contains:
-    - Number of processes
-    - Average CPU usage
-    - Average memory usage
-    - Average I/O usage
-    - Average burst time
-    """
+    REQUIRED_FIELDS = ("arrival_time", "burst_time", "priority")
 
-    def profile_workload(self, processes):
+    @staticmethod
+    def _get(process, key, default=None):
+        if isinstance(process, dict):
+            return process.get(key, default)
+        return getattr(process, key, default)
 
-        if not processes:
-            raise ValueError("Workload cannot be empty.")
+    def profile(self, processes):
+        if not isinstance(processes, (list, tuple)) or not processes:
+            raise ValueError(
+                "Workload must be a non-empty list or tuple of processes."
+            )
 
-        process_count = len(processes)
+        arrivals = []
+        bursts = []
+        priorities = []
 
-        avg_cpu = sum(
-            process["cpu_usage"] for process in processes
-        ) / process_count
+        for index, process in enumerate(processes):
+            if process is None:
+                raise ValueError(f"Process at index {index} is invalid.")
 
-        avg_memory = sum(
-            process["memory_usage"] for process in processes
-        ) / process_count
+            values = {}
 
-        avg_io = sum(
-            process["io_usage"] for process in processes
-        ) / process_count
+            for field in self.REQUIRED_FIELDS:
+                value = self._get(process, field)
 
-        avg_burst = sum(
-            process["burst_time"] for process in processes
-        ) / process_count
+                if value is None or isinstance(value, bool):
+                    raise ValueError(
+                        f"Process at index {index} is missing a valid "
+                        f"'{field}' value."
+                    )
 
-        profile = {
-            "process_count": process_count,
-            "avg_cpu_usage": round(avg_cpu, 2),
-            "avg_memory_usage": round(avg_memory, 2),
-            "avg_io_usage": round(avg_io, 2),
-            "avg_burst_time": round(avg_burst, 2)
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        f"'{field}' in process {index} must be numeric."
+                    ) from None
+
+                if not isfinite(value):
+                    raise ValueError(
+                        f"'{field}' in process {index} must be finite."
+                    )
+
+                values[field] = value
+
+            if values["arrival_time"] < 0:
+                raise ValueError("Arrival times cannot be negative.")
+
+            if values["burst_time"] <= 0:
+                raise ValueError("Burst times must be greater than zero.")
+
+            arrivals.append(values["arrival_time"])
+            bursts.append(values["burst_time"])
+            priorities.append(values["priority"])
+
+        count = len(processes)
+        average_burst = sum(bursts) / count
+        variance = sum(
+            (burst - average_burst) ** 2 for burst in bursts
+        ) / count
+
+        sorted_arrivals = sorted(arrivals)
+        average_arrival_gap = (
+            sum(
+                sorted_arrivals[i] - sorted_arrivals[i - 1]
+                for i in range(1, count)
+            ) / (count - 1)
+            if count > 1 else 0.0
+        )
+
+        return {
+            "process_count": count,
+            "average_burst_time": average_burst,
+            "max_burst_time": max(bursts),
+            "min_burst_time": min(bursts),
+            "burst_std_dev": sqrt(variance),
+            "average_arrival_gap": average_arrival_gap,
+            "priority_spread": max(priorities) - min(priorities),
+            "zero_arrival_processes": sum(
+                arrival == 0 for arrival in arrivals
+            ),
         }
-
-        return profile

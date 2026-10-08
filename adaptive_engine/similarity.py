@@ -1,87 +1,64 @@
-class SimilarityMatcher:
-    """
-    Compares a current workload profile with historical
-    workload profiles.
-    """
+from math import isfinite
 
-    def calculate_similarity(self, current_profile, historical_profile):
-        """
-        Calculate similarity between two workload profiles.
 
-        Returns a value between 0 and 1:
-        1.0 = exactly similar
-        0.0 = completely different
-        """
+class WorkloadSimilarity:
+    """Compare current workload features with historical workloads."""
 
-        features = [
-            "process_count",
-            "avg_cpu_usage",
-            "avg_memory_usage",
-            "avg_io_usage",
-            "avg_burst_time"
-        ]
+    WEIGHTS = {
+        "process_count": 0.20,
+        "average_burst_time": 0.25,
+        "burst_std_dev": 0.20,
+        "average_arrival_gap": 0.15,
+        "priority_spread": 0.20,
+    }
 
-        differences = []
+    def similarity_score(self, current, historical):
+        if not isinstance(current, dict) or not isinstance(historical, dict):
+            raise ValueError("Workload features must be dictionaries.")
 
-        for feature in features:
-            current_value = current_profile[feature]
-            historical_value = historical_profile[feature]
+        score_total = 0.0
 
-            if current_value == 0 and historical_value == 0:
-                difference = 0
+        for feature, weight in self.WEIGHTS.items():
+            try:
+                a = float(current[feature])
+                b = float(historical[feature])
+            except (KeyError, TypeError, ValueError):
+                raise ValueError(f"Missing or invalid feature: {feature}") from None
 
-            else:
-                maximum = max(
-                    abs(current_value),
-                    abs(historical_value),
-                    1
-                )
+            if not isfinite(a) or not isfinite(b):
+                raise ValueError(f"Feature '{feature}' must be finite.")
 
-                difference = (
-                    abs(current_value - historical_value)
-                    / maximum
-                )
+            scale = max(abs(a), abs(b), 1.0)
+            score_total += max(0.0, 1.0 - abs(a - b) / scale) * weight
 
-            differences.append(difference)
+        return score_total
 
-        average_difference = sum(differences) / len(differences)
+    def find_similar(self, current_features, historical_records, threshold=0.75):
+        if (
+            isinstance(threshold, bool)
+            or not isinstance(threshold, (int, float))
+            or not isfinite(threshold)
+            or not 0 <= threshold <= 1
+        ):
+            raise ValueError("Threshold must be between 0 and 1.")
 
-        similarity = 1 - average_difference
+        if not isinstance(historical_records, (list, tuple)):
+            raise ValueError("Historical records must be a list or tuple.")
 
-        return round(max(0, similarity), 4)
+        matches = []
 
-    def find_similar_workloads(
-        self,
-        current_profile,
-        historical_profiles,
-        threshold=0.80
-    ):
-        """
-        Find historical workloads whose similarity is
-        greater than or equal to the threshold.
-        """
+        for record in historical_records:
+            if not isinstance(record, dict):
+                continue
 
-        similar_workloads = []
+            features = record.get("features", record)
 
-        for historical_profile in historical_profiles:
+            try:
+                score = self.similarity_score(current_features, features)
+            except ValueError:
+                continue
 
-            similarity = self.calculate_similarity(
-                current_profile,
-                historical_profile
-            )
+            if score >= threshold:
+                matches.append({"record": record, "similarity": score})
 
-            if similarity >= threshold:
-
-                result = {
-                    "profile": historical_profile,
-                    "similarity": similarity
-                }
-
-                similar_workloads.append(result)
-
-        similar_workloads.sort(
-            key=lambda x: x["similarity"],
-            reverse=True
-        )
-
-        return similar_workloads
+        return sorted(matches, key=lambda item: item["similarity"], reverse=True)
