@@ -1,0 +1,4 @@
+- [Generated API client DOM types](generated-api-client-dom-types.md) — generated fetch clients need `dom.iterable` for `Headers.entries()`.
+- [Local agent dependency](local-agent-dependency.md) — psutil belongs in the desktop agent environment; it is unavailable in this managed Python workspace.
+- [Artifact registry after local Git rewrites](artifact-registry-after-history-rewrite.md) — verify registered previews and workflows after local ref-history operations; source files alone are not enough.
+- [AdaptiveOS AI commentary](adaptiveos-ai-commentary.md) — use Replit-managed AI only; keep explanations disabled until configured, with deterministic recommendations as source of truth.

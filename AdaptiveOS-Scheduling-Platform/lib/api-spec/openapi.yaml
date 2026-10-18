@@ -1,0 +1,931 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: AdaptiveOS scheduling research platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+  - name: workloads
+  - name: simulations
+  - name: agent
+  - name: community
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get persisted dashboard metrics and recent activity
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /algorithms:
+    get:
+      operationId: listAlgorithms
+      tags: [simulations]
+      summary: List built-in scheduling algorithms
+      responses:
+        "200":
+          description: Available algorithms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Algorithm"
+  /workloads:
+    get:
+      operationId: listWorkloads
+      tags: [workloads]
+      summary: List saved workloads
+      responses:
+        "200":
+          description: Saved workloads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkloadSummary"
+    post:
+      operationId: createWorkload
+      tags: [workloads]
+      summary: Create and persist a workload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadInput"
+      responses:
+        "201":
+          description: Created workload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workload"
+  /workloads/import:
+    post:
+      operationId: importWorkloadCsv
+      tags: [workloads]
+      summary: Validate and import a process CSV
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CsvImportInput"
+      responses:
+        "201":
+          description: Imported workload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workload"
+        "400":
+          description: Invalid CSV
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /workloads/{workloadId}:
+    get:
+      operationId: getWorkload
+      tags: [workloads]
+      summary: Get a workload and its processes
+      parameters:
+        - name: workloadId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Workload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workload"
+        "404":
+          description: Workload not found
+    delete:
+      operationId: deleteWorkload
+      tags: [workloads]
+      summary: Delete a saved workload and its local simulation records
+      parameters:
+        - name: workloadId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+  /simulations/run:
+    post:
+      operationId: runSimulations
+      tags: [simulations]
+      summary: Run one or more schedulers against the same saved workload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulationInput"
+      responses:
+        "201":
+          description: Completed simulation runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Simulation"
+  /simulations:
+    get:
+      operationId: listSimulations
+      tags: [simulations]
+      summary: List persisted simulation runs
+      parameters:
+        - name: workloadId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Simulation history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SimulationSummary"
+  /simulations/{simulationId}:
+    get:
+      operationId: getSimulation
+      tags: [simulations]
+      summary: Get simulation details and timeline
+      parameters:
+        - name: simulationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Simulation detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Simulation"
+  /recommendations:
+    post:
+      operationId: createRecommendation
+      tags: [simulations]
+      summary: Evaluate algorithms and summarize the best simulation result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendationInput"
+      responses:
+        "200":
+          description: Recommendation with measured comparisons
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recommendation"
+  /recommendations/explanation:
+    post:
+      operationId: createRecommendationExplanation
+      tags: [simulations]
+      summary: Generate optional plain-language commentary for a deterministic recommendation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendationExplanationInput"
+      responses:
+        "200":
+          description: AI-written explanation of aggregate simulation metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationExplanation"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Workload not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: AI commentary is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /analytics:
+    get:
+      operationId: getAnalytics
+      tags: [simulations]
+      summary: Get persisted comparisons for a workload
+      parameters:
+        - name: workloadId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analytics comparisons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsRow"
+  /agent/health:
+    get:
+      operationId: getAgentHealth
+      tags: [agent]
+      summary: Get recent local-agent connectivity status
+      responses:
+        "200":
+          description: Agent status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentHealth"
+  /agent/snapshots:
+    get:
+      operationId: listAgentSnapshots
+      tags: [agent]
+      summary: List locally recorded agent snapshots
+      responses:
+        "200":
+          description: Snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentSnapshot"
+    post:
+      operationId: createAgentSnapshot
+      tags: [agent]
+      summary: Store a validated opt-in process snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentSnapshotInput"
+      responses:
+        "201":
+          description: Snapshot stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentSnapshot"
+  /agent/snapshots/{snapshotId}:
+    delete:
+      operationId: deleteAgentSnapshot
+      tags: [agent]
+      summary: Delete a locally stored process snapshot
+      parameters:
+        - name: snapshotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Snapshot deleted
+  /agent/workloads:
+    post:
+      operationId: createAgentWorkload
+      tags: [agent]
+      summary: Create an estimated simulation workload from a snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentWorkloadInput"
+      responses:
+        "201":
+          description: Estimated workload for user preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workload"
+  /community/metrics:
+    get:
+      operationId: listSharedMetrics
+      tags: [community]
+      summary: Browse voluntarily shared simulation results
+      responses:
+        "200":
+          description: Shared results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SharedMetric"
+  /community/metrics/{simulationId}/share:
+    post:
+      operationId: shareSimulation
+      tags: [community]
+      summary: Explicitly publish one saved simulation to the community
+      parameters:
+        - name: simulationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareInput"
+      responses:
+        "201":
+          description: Shared result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedMetric"
+  /community/metrics/{metricId}/comments:
+    get:
+      operationId: listMetricComments
+      tags: [community]
+      summary: List comments on a shared result
+      parameters:
+        - name: metricId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityComment"
+    post:
+      operationId: createMetricComment
+      tags: [community]
+      summary: Comment on a shared result
+      parameters:
+        - name: metricId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityComment"
+  /community/algorithms:
+    get:
+      operationId: listCommunityAlgorithms
+      tags: [community]
+      summary: Browse built-in and community algorithm submissions
+      responses:
+        "200":
+          description: Algorithm library
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityAlgorithm"
+    post:
+      operationId: createCommunityAlgorithm
+      tags: [community]
+      summary: Submit source code for review without execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlgorithmInput"
+      responses:
+        "201":
+          description: Algorithm submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityAlgorithm"
+  /community/algorithms/{algorithmId}/comments:
+    get:
+      operationId: listAlgorithmComments
+      tags: [community]
+      summary: List comments on a community algorithm
+      parameters:
+        - name: algorithmId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityComment"
+    post:
+      operationId: createAlgorithmComment
+      tags: [community]
+      summary: Comment on an algorithm submission
+      parameters:
+        - name: algorithmId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityComment"
+  /community/discussions:
+    get:
+      operationId: listDiscussions
+      tags: [community]
+      summary: Browse discussion posts
+      responses:
+        "200":
+          description: Discussions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Discussion"
+    post:
+      operationId: createDiscussion
+      tags: [community]
+      summary: Create a discussion post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscussionInput"
+      responses:
+        "201":
+          description: Created discussion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discussion"
+  /community/discussions/{discussionId}/comments:
+    get:
+      operationId: listDiscussionComments
+      tags: [community]
+      summary: List replies to a discussion
+      parameters:
+        - name: discussionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Replies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityComment"
+    post:
+      operationId: createDiscussionComment
+      tags: [community]
+      summary: Reply to a discussion
+      parameters:
+        - name: discussionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityComment"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+    ProcessInput:
+      type: object
+      properties:
+        pid: { type: string }
+        arrivalTime: { type: number, minimum: 0 }
+        burstTime: { type: number, exclusiveMinimum: 0 }
+        priority: { type: integer }
+        memoryMb: { type: number, minimum: 0 }
+      required: [pid, arrivalTime, burstTime, priority, memoryMb]
+    Process:
+      allOf:
+        - $ref: "#/components/schemas/ProcessInput"
+        - type: object
+          properties:
+            id: { type: integer }
+          required: [id]
+    WorkloadInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 500 }
+        source: { type: string, enum: [generated, manual, csv, agent] }
+        profile: { type: string, enum: [cpu-intensive, short-job-heavy, mixed, memory-heavy, random, observed-estimate] }
+        seed: { type: ["integer", "null"] }
+        snapshotId: { type: ["integer", "null"] }
+        processes:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: "#/components/schemas/ProcessInput" }
+      required: [name, source, profile, processes]
+    Workload:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        source: { type: string }
+        profile: { type: string }
+        seed: { type: ["integer", "null"] }
+        snapshotId: { type: ["integer", "null"] }
+        createdAt: { type: string, format: date-time }
+        processes:
+          type: array
+          items: { $ref: "#/components/schemas/Process" }
+      required: [id, name, source, profile, createdAt, processes]
+    WorkloadSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        source: { type: string }
+        profile: { type: string }
+        processCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, source, profile, processCount, createdAt]
+    CsvImportInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        csv: { type: string, minLength: 1, maxLength: 2000000 }
+      required: [name, csv]
+    Algorithm:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        sourceCode: { type: string }
+        preemptive: { type: boolean }
+        configurable: { type: boolean }
+      required: [id, name, description, sourceCode, preemptive, configurable]
+    SimulationInput:
+      type: object
+      properties:
+        workloadId: { type: integer }
+        algorithmIds:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { type: string }
+        quantum: { type: number, minimum: 0.1, maximum: 1000, default: 2 }
+      required: [workloadId, algorithmIds]
+    Metrics:
+      type: object
+      properties:
+        averageWaitingTime: { type: number }
+        averageTurnaroundTime: { type: number }
+        averageResponseTime: { type: number }
+        cpuUtilization: { type: number }
+        throughput: { type: number }
+        totalDuration: { type: number }
+      required: [averageWaitingTime, averageTurnaroundTime, averageResponseTime, cpuUtilization, throughput, totalDuration]
+    ProcessResult:
+      type: object
+      properties:
+        pid: { type: string }
+        arrivalTime: { type: number }
+        burstTime: { type: number }
+        priority: { type: integer }
+        memoryMb: { type: number }
+        startTime: { type: number }
+        completionTime: { type: number }
+        waitingTime: { type: number }
+        turnaroundTime: { type: number }
+        responseTime: { type: number }
+      required: [pid, arrivalTime, burstTime, priority, memoryMb, startTime, completionTime, waitingTime, turnaroundTime, responseTime]
+    Segment:
+      type: object
+      properties:
+        pid: { type: string }
+        start: { type: number }
+        end: { type: number }
+        kind: { type: string, enum: [process, idle] }
+      required: [pid, start, end, kind]
+    Simulation:
+      type: object
+      properties:
+        id: { type: integer }
+        workloadId: { type: integer }
+        workloadName: { type: string }
+        algorithmId: { type: string }
+        algorithmName: { type: string }
+        quantum: { type: ["number", "null"] }
+        metrics: { $ref: "#/components/schemas/Metrics" }
+        processes:
+          type: array
+          items: { $ref: "#/components/schemas/ProcessResult" }
+        timeline:
+          type: array
+          items: { $ref: "#/components/schemas/Segment" }
+        createdAt: { type: string, format: date-time }
+      required: [id, workloadId, workloadName, algorithmId, algorithmName, metrics, processes, timeline, createdAt]
+    SimulationSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        workloadId: { type: integer }
+        workloadName: { type: string }
+        algorithmId: { type: string }
+        algorithmName: { type: string }
+        metrics: { $ref: "#/components/schemas/Metrics" }
+        createdAt: { type: string, format: date-time }
+      required: [id, workloadId, workloadName, algorithmId, algorithmName, metrics, createdAt]
+    RecommendationInput:
+      type: object
+      properties:
+        workloadId: { type: integer }
+        objective: { type: string, enum: [waiting, turnaround, response, balanced] }
+        quantum: { type: number, minimum: 0.1, maximum: 1000, default: 2 }
+      required: [workloadId, objective]
+    RecommendationExplanationInput:
+      type: object
+      properties:
+        workloadId: { type: integer }
+        objective: { type: string, enum: [waiting, turnaround, response, balanced] }
+        quantum: { type: number, minimum: 0.1, maximum: 1000, default: 2 }
+      required: [workloadId, objective]
+    RecommendationExplanation:
+      type: object
+      properties:
+        explanation: { type: string }
+      required: [explanation]
+    RecommendationRow:
+      type: object
+      properties:
+        algorithmId: { type: string }
+        algorithmName: { type: string }
+        score: { type: number }
+        metrics: { $ref: "#/components/schemas/Metrics" }
+      required: [algorithmId, algorithmName, score, metrics]
+    Recommendation:
+      type: object
+      properties:
+        objective: { type: string }
+        recommendedAlgorithmId: { type: string }
+        recommendedAlgorithmName: { type: string }
+        rationale: { type: string }
+        historicalEvidenceAvailable: { type: boolean }
+        aiExplanationAvailable: { type: boolean }
+        evaluations:
+          type: array
+          items: { $ref: "#/components/schemas/RecommendationRow" }
+      required: [objective, recommendedAlgorithmId, recommendedAlgorithmName, rationale, historicalEvidenceAvailable, aiExplanationAvailable, evaluations]
+    AnalyticsRow:
+      allOf:
+        - $ref: "#/components/schemas/SimulationSummary"
+    Dashboard:
+      type: object
+      properties:
+        workloadCount: { type: integer }
+        simulationCount: { type: integer }
+        sharedResultCount: { type: integer }
+        processCount: { type: integer }
+        recentSimulations:
+          type: array
+          items: { $ref: "#/components/schemas/SimulationSummary" }
+        recentWorkloads:
+          type: array
+          items: { $ref: "#/components/schemas/WorkloadSummary" }
+        latestRecommendation:
+          type: ["object", "null"]
+          properties:
+            algorithmName: { type: string }
+            objective: { type: string }
+            rationale: { type: string }
+      required: [workloadCount, simulationCount, sharedResultCount, processCount, recentSimulations, recentWorkloads]
+    AgentProcessInput:
+      type: object
+      properties:
+        pid: { type: integer, minimum: 0 }
+        name: { type: string, maxLength: 160 }
+        createdAt: { type: ["string", "null"], format: date-time }
+        status: { type: ["string", "null"], maxLength: 40 }
+        cpuPercent: { type: ["number", "null"], minimum: 0, maximum: 1000 }
+        memoryMb: { type: ["number", "null"], minimum: 0 }
+      required: [pid, name]
+    AgentSnapshotInput:
+      type: object
+      properties:
+        schemaVersion: { type: string, enum: ["1"] }
+        observedAt: { type: string, format: date-time }
+        observationSeconds: { type: number, minimum: 0, maximum: 3600 }
+        processes:
+          type: array
+          maxItems: 2000
+          items: { $ref: "#/components/schemas/AgentProcessInput" }
+      required: [schemaVersion, observedAt, observationSeconds, processes]
+    AgentSnapshot:
+      type: object
+      properties:
+        id: { type: integer }
+        schemaVersion: { type: string }
+        observedAt: { type: string, format: date-time }
+        receivedAt: { type: string, format: date-time }
+        observationSeconds: { type: number }
+        processCount: { type: integer }
+        processes:
+          type: array
+          items: { $ref: "#/components/schemas/AgentProcessInput" }
+      required: [id, schemaVersion, observedAt, receivedAt, observationSeconds, processCount, processes]
+    AgentWorkloadInput:
+      type: object
+      properties:
+        snapshotId: { type: integer }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        includeAll: { type: boolean }
+      required: [snapshotId, name, includeAll]
+    AgentHealth:
+      type: object
+      properties:
+        connected: { type: boolean }
+        lastSeenAt: { type: ["string", "null"], format: date-time }
+        snapshotCount: { type: integer }
+      required: [connected, snapshotCount]
+    SharedMetric:
+      type: object
+      properties:
+        id: { type: integer }
+        simulationId: { type: integer }
+        title: { type: string }
+        authorName: { type: string }
+        algorithmName: { type: string }
+        workloadName: { type: string }
+        processCount: { type: integer }
+        metrics: { $ref: "#/components/schemas/Metrics" }
+        createdAt: { type: string, format: date-time }
+        commentCount: { type: integer }
+      required: [id, simulationId, title, authorName, algorithmName, workloadName, processCount, metrics, createdAt, commentCount]
+    ShareInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        authorName: { type: string, minLength: 1, maxLength: 60 }
+      required: [title, authorName]
+    CommunityComment:
+      type: object
+      properties:
+        id: { type: integer }
+        authorName: { type: string }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, authorName, message, createdAt]
+    CommentInput:
+      type: object
+      properties:
+        authorName: { type: string, minLength: 1, maxLength: 60 }
+        message: { type: string, minLength: 1, maxLength: 2000 }
+      required: [authorName, message]
+    CommunityAlgorithm:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        authorName: { type: string }
+        sourceCode: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        status: { type: string, enum: [built-in, review-unexecuted] }
+        createdAt: { type: string, format: date-time }
+        commentCount: { type: integer }
+      required: [id, name, description, authorName, sourceCode, tags, status, createdAt, commentCount]
+    AlgorithmInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, minLength: 1, maxLength: 1000 }
+        authorName: { type: string, minLength: 1, maxLength: 60 }
+        sourceCode: { type: string, minLength: 1, maxLength: 200000 }
+        tags:
+          type: array
+          maxItems: 10
+          items: { type: string, maxLength: 30 }
+      required: [name, description, authorName, sourceCode]
+    Discussion:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        body: { type: string }
+        category: { type: string }
+        authorName: { type: string }
+        createdAt: { type: string, format: date-time }
+        commentCount: { type: integer }
+      required: [id, title, body, category, authorName, createdAt, commentCount]
+    DiscussionInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        body: { type: string, minLength: 1, maxLength: 5000 }
+        category: { type: string, enum: [CPU Scheduling, Operating Systems, Algorithms, Performance Analysis, Datasets, Project Help, General Discussion] }
+        authorName: { type: string, minLength: 1, maxLength: 60 }
+      required: [title, body, category, authorName]
+
