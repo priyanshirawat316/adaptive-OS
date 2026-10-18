@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AdaptiveOS"
+description = "A CPU scheduling research platform for generating and analyzing workloads, comparing scheduling algorithms, capturing opt-in PC process snapshots, and sharing benchmark results with a community."
+version = "1.0.0"
+id = "artifacts/adaptiveos"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24627
+
+[services.development]
+run = "pnpm --filter @workspace/adaptiveos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/adaptiveos", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/adaptiveos/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24627"
+BASE_PATH = "/"

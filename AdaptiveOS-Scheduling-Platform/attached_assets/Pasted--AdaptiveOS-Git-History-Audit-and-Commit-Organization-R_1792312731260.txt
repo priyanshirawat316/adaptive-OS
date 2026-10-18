@@ -1,0 +1,81 @@
+# AdaptiveOS — Git History Audit and Commit Organization
+
+Review the existing AdaptiveOS repository and organize its Git history to accurately reflect the project's implementation, task ownership, and development progress.
+
+## 1. GitHub contributor identities
+
+Use the following GitHub accounts when identifying existing contributions:
+
+- **Shashwat Singh Kushwah:** `shashwat20068` — https://github.com/shashwat20068
+- **Priyanshi Rawat:** `priyanshirawat316` — https://github.com/priyanshirawat316
+
+Inspect the existing commit authors and repository configuration before making changes. Do not automatically reassign commits or change author metadata without verifying who actually performed the work.
+
+## 2. Project tasks completed
+
+Use the following completed-task list to understand the project's implementation and organize the relevant code into meaningful areas.
+
+### Shashwat Singh Kushwah
+- OS Simulator development
+- Cold-Start Evaluation
+- Performance comparison and result analysis
+
+### Priyanshi Rawat
+- System architecture design
+- Workload Profiler implementation
+- Similarity Matching implementation
+- Decision Engine and Policy Selection
+- Frontend development
+
+### Abhishek Yadav
+- Database design and integration
+
+Inspect the actual codebase to determine which components exist, how they interact, and which implementations are complete. Do not assume that a task is implemented merely because it appears in this list.
+
+## 3. Commit organization
+
+Review the existing history and make it readable, meaningful, and consistent with the project's architecture.
+
+Where appropriate, use descriptive commit messages such as:
+
+- `feat(simulator): implement OS workload simulation`
+- `feat(profiler): add workload profiling`
+- `feat(engine): implement scheduling policy selection`
+- `feat(matching): add workload similarity matching`
+- `feat(evaluation): implement cold-start evaluation`
+- `feat(analytics): add scheduling performance comparison`
+- `feat(frontend): build simulator dashboard`
+- `feat(database): integrate persistent storage`
+- `docs(architecture): document system architecture`
+
+These are examples, not instructions to create artificial commits. Only retain or create commits that correspond to real, identifiable code changes.
+
+## 4. Date handling
+
+The requested reporting period is 20 September 2026 through 17 October 2026.
+
+Inspect existing commit timestamps and preserve their accuracy. If a commit has an incorrect timestamp, correct it only when its actual date can be established from reliable evidence. Do not assign arbitrary dates to commits or manufacture a development timeline.
+
+## 5. Tasks that must remain pending
+
+Do not create commits claiming completion of any of these tasks:
+
+- Complete algorithm upload and download — assigned to Shashwat
+- Integrate global performance tracking with database — assigned to Abhishek
+- Implement AI-based performance summaries — assigned to Priyanshi
+- Final integration testing — assigned to Shashwat
+
+These tasks must remain marked as pending unless their implementations are actually completed and verified.
+
+## 6. Safety and verification
+
+Before modifying Git history:
+
+1. Inspect `git status`, branches, remotes, and recent commit history.
+2. Preserve all uncommitted changes.
+3. Create a backup branch before any history rewrite.
+4. Do not force-push or modify the remote repository without explicit approval.
+5. Verify that each commit corresponds to a real change and that the project still builds or runs.
+6. Provide a summary of the changes, the existing commit history, any metadata corrections, and remaining pending tasks.
+
+**Goal:** Produce a clean, understandable, verifiable Git history for AdaptiveOS without inventing contributions or completion dates.
